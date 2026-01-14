@@ -4,9 +4,10 @@ project(Pacman)
 
 add_executable(Pacman src/main.c libs/glad/src/glad.c)
 target_link_libraries( Pacman
-		       X11
-		       GL
-		       Xrandr)
+  m
+  X11
+  GL
+  Xrandr)
 target_include_directories(Pacman
 	PRIVATE "libs/rgfw/" 
 	PRIVATE "libs/glad/include"

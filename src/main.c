@@ -1,9 +1,75 @@
 #define RGFW_IMPLEMENTATION
 #define RGFW_OPENGL
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h" 
 
 #include "RGFW.h"
 #include <glad/glad.h>
 #include <stdio.h>
+uint CompileShader(const char *FilePath, GLenum ShaderType) ;
+float vertices[] = {
+    0.5f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, -0.5f, -0.5f, 0.0f, -0.5f, 0.5f, 0.0f,
+};
+
+float texCoords [] ={ 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f};
+
+uint indices[] = {0, 1, 3, 1, 2, 3};
+
+struct {
+  unsigned int shaderProgram;
+  unsigned int VAO;
+  unsigned int EBO;
+  unsigned int VBO;
+} RenderVariables;
+
+typedef struct Sprite{
+  uint ImageID;
+  char* Name;
+};
+
+
+void prepRender(){
+  // Load Vertex Shader
+  uint vert_shader = CompileShader("vertex.glsl", GL_VERTEX_SHADER);
+  // Load Fragment Shader
+  uint frag_shader = CompileShader("fragment.glsl", GL_FRAGMENT_SHADER);
+
+  RenderVariables.shaderProgram = glCreateProgram();
+  glAttachShader(RenderVariables.shaderProgram, vert_shader);
+  glAttachShader(RenderVariables.shaderProgram, frag_shader);
+
+  glLinkProgram(RenderVariables.shaderProgram);
+  int success;
+  glGetProgramiv(RenderVariables.shaderProgram, GL_LINK_STATUS, &success);
+  if (!success) {
+    char log[512];
+    glGetProgramInfoLog(RenderVariables.shaderProgram, 512, NULL, log);
+    printf("LINK ERROR SHADERPROGRAM", log);
+  }
+  glDeleteShader(vert_shader);
+  glDeleteShader(frag_shader);
+
+  glGenVertexArrays(1, &RenderVariables.VAO);
+  glGenBuffers(1, &RenderVariables.VBO);
+  glGenBuffers(1, &RenderVariables.EBO);
+
+  glBindVertexArray(RenderVariables.VAO);
+
+  glBindBuffer(GL_ARRAY_BUFFER, RenderVariables.VBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, RenderVariables.EBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
+               GL_STATIC_DRAW);
+
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+  glEnableVertexAttribArray(0);
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindVertexArray(0);
+
+}
+
 
 void keyfunc(RGFW_window *win, RGFW_key key, u8 keychar, RGFW_keymod keymod,
              RGFW_bool repeat, RGFW_bool pressed) {
@@ -12,6 +78,7 @@ void keyfunc(RGFW_window *win, RGFW_key key, u8 keychar, RGFW_keymod keymod,
     RGFW_window_setShouldClose(win, 1);
   }
 }
+
 RGFW_window *SetupWindow() {
   RGFW_glHints *hints = RGFW_getGlobalHints_OpenGL();
   hints->major = 4;
@@ -74,58 +141,35 @@ uint CompileShader(const char *FilePath, GLenum ShaderType) {
   return shader;
 }
 
-float vertices[] = {
-    0.5f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, -0.5f, -0.5f, 0.0f, -0.5f, 0.5f, 0.0f,
-};
-
-uint indices[] = {0, 1, 3, 1, 2, 3};
-
-struct {
-  unsigned int shaderProgram;
-  unsigned int VAO;
-  unsigned int EBO;
-  unsigned int VBO;
-} RenderVariables;
-
 void Setup() {
-  // Load Vertex Shader
-  uint vert_shader = CompileShader("vertex.glsl", GL_VERTEX_SHADER);
-  // Load Fragment Shader
-  uint frag_shader = CompileShader("fragment.glsl", GL_FRAGMENT_SHADER);
+  prepRender();
 
-  RenderVariables.shaderProgram = glCreateProgram();
-  glAttachShader(RenderVariables.shaderProgram, vert_shader);
-  glAttachShader(RenderVariables.shaderProgram, frag_shader);
 
-  glLinkProgram(RenderVariables.shaderProgram);
-  int success;
-  glGetProgramiv(RenderVariables.shaderProgram, GL_LINK_STATUS, &success);
-  if (!success) {
-    char log[512];
-    glGetProgramInfoLog(RenderVariables.shaderProgram, 512, NULL, log);
-    printf("LINK ERROR SHADERPROGRAM", log);
-  }
-  glDeleteShader(vert_shader);
-  glDeleteShader(frag_shader);
+  // Load images
+  uint width, height;
+  uint channels =4;
+  unsigned char * data  = stbi_load("../sprites/mineger.png" ,&width, &height, &channels, 4);
+  printf("Loaded PNG penger is %u * %u and has %u channels",  width, height , channels);
 
-  glGenVertexArrays(1, &RenderVariables.VAO);
-  glGenBuffers(1, &RenderVariables.VBO);
-  glGenBuffers(1, &RenderVariables.EBO);
+  free(data);
+  // Setup world etc....
+}
 
-  glBindVertexArray(RenderVariables.VAO);
+void clearScreen(){
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+void Render(RGFW_window * win){
+    glUseProgram(RenderVariables.shaderProgram);
+    glBindVertexArray(RenderVariables.VAO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    RGFW_window_swapBuffers_OpenGL(win);
+}
 
-  glBindBuffer(GL_ARRAY_BUFFER, RenderVariables.VBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, RenderVariables.EBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-               GL_STATIC_DRAW);
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
-  glEnableVertexAttribArray(0);
-
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindVertexArray(0);
+void Update(){
+  // DO SOMETHING
 }
 
 int main(int argc, char **argv) {
@@ -134,14 +178,9 @@ int main(int argc, char **argv) {
   while (RGFW_window_shouldClose(win) == RGFW_FALSE) {
     RGFW_event event;
     RGFW_pollEvents();
+    Update();
+    Render(win);
 
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    glUseProgram(RenderVariables.shaderProgram);
-    glBindVertexArray(RenderVariables.VAO);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    RGFW_window_swapBuffers_OpenGL(win);
   }
   RGFW_window_close(win);
 
