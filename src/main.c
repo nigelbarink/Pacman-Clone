@@ -6,6 +6,9 @@
 #include "RGFW.h"
 #include <glad/glad.h>
 #include <stdio.h>
+#include "cam.h" 
+#include "affine.h"
+#include "mat4.h" 
 uint CompileShader(const char *FilePath, GLenum ShaderType) ;
 float vertices[] = {
     0.5f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, -0.5f, -0.5f, 0.0f, -0.5f, 0.5f, 0.0f,
@@ -18,6 +21,14 @@ float texCoords [] ={
   0.0f, 0.0f};
 
 uint indices[] = {0, 1, 3, 1, 2, 3};
+
+// TODO: Efficiently align it!!
+typedef struct {
+  float scale;
+  vec3 position;
+  mat4 matrix;
+} Transform_t;
+
 
 struct {
   unsigned int shaderProgram;
@@ -183,11 +194,39 @@ void clearScreen(){
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 }
+
+
+
+mat4 transform;
+void calcTransform(){
+  mat4 ortho;
+  const float asp_ratio = 0.75f;
+  glm_ortho_default(asp_ratio,ortho);
+  glm_translate_z(ortho, 1);
+
+  mat4 scale ;
+  glm_mat4_identity(scale);
+  float s = .25f;
+  glm_scale(scale, &s);
+
+
+  mat4 local ;
+  glm_mat4_identity (local);
+  glm_translate(local, (vec3){2.0,0.0,0.0});
+
+  mat4 temp;
+  glm_mat4_mul( scale, local, temp);
+  glm_mat4_mul(temp ,ortho , transform);
+
+}
+
+
 void Render(RGFW_window * win){
     glUseProgram(RenderVariables.shaderProgram);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
     glUniform1i(glGetUniformLocation(RenderVariables.shaderProgram, "image"), 0); 
+    glUniformMatrix4fv (glGetUniformLocation(RenderVariables.shaderProgram, "transform" ),1,GL_FALSE, transform[0]);
     glBindVertexArray(RenderVariables.VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     RGFW_window_swapBuffers_OpenGL(win);
@@ -202,6 +241,7 @@ void Update(){
 int main(int argc, char **argv) {
   RGFW_window *win = SetupWindow();
   Setup();
+  calcTransform();
   while (RGFW_window_shouldClose(win) == RGFW_FALSE) {
     RGFW_event event;
     RGFW_pollEvents();

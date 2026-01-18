@@ -11,6 +11,7 @@ target_link_libraries( Pacman
 target_include_directories(Pacman
 	PRIVATE "libs/rgfw/" 
 	PRIVATE "libs/glad/include"
+	PRIVATE "libs/cglm" 
       )
 
 
