@@ -11,7 +11,11 @@ float vertices[] = {
     0.5f, 0.5f, 0.0f, 0.5f, -0.5f, 0.0f, -0.5f, -0.5f, 0.0f, -0.5f, 0.5f, 0.0f,
 };
 
-float texCoords [] ={ 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f};
+float texCoords [] ={
+  1.0f, 0.0f,
+  1.0f, 1.0f,
+  0.0f, 1.0f,
+  0.0f, 0.0f};
 
 uint indices[] = {0, 1, 3, 1, 2, 3};
 
@@ -27,6 +31,8 @@ typedef struct Sprite{
   char* Name;
 };
 
+GLuint texture;
+GLuint texVBO;
 
 void prepRender(){
   // Load Vertex Shader
@@ -44,7 +50,7 @@ void prepRender(){
   if (!success) {
     char log[512];
     glGetProgramInfoLog(RenderVariables.shaderProgram, 512, NULL, log);
-    printf("LINK ERROR SHADERPROGRAM", log);
+    printf("LINK ERROR SHADERPROGRAM %s \n", log);
   }
   glDeleteShader(vert_shader);
   glDeleteShader(frag_shader);
@@ -65,8 +71,33 @@ void prepRender(){
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
 
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindVertexArray(0);
+  // Load images
+  uint width, height;
+  uint channels =4;
+  unsigned char * data  = stbi_load("../sprites/mineger.png" ,&width, &height, &channels, 4);
+  if ( data == NULL){
+    printf("Failed to load sprite");
+    return ;
+  }
+  printf("Loaded PNG penger is %u * %u and has %u channels\n",  width, height , channels);
+  glGenTextures(1, &texture);
+
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width,height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
+ glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
+  glGenerateMipmap(GL_TEXTURE_2D);
+  free(data);
+  
+  glGenBuffers(1, &texVBO);
+  glBindBuffer(GL_ARRAY_BUFFER, texVBO);
+  glBufferData( GL_ARRAY_BUFFER, sizeof(texCoords), texCoords, GL_STATIC_DRAW);
+
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float),(void*)0);
+  glEnableVertexAttribArray(1);
+
 
 }
 
@@ -95,7 +126,7 @@ RGFW_window *SetupWindow() {
 
   // Initialize GLAD
   if (!gladLoadGLLoader((GLADloadproc)RGFW_getProcAddress_OpenGL)) {
-    printf("Failed to load GLAD!");
+    printf("Failed to load GLAD!\n");
     return NULL;
   }
   return win;
@@ -111,7 +142,7 @@ char *LoadFile(const char *Path) {
   FILE *fptr;
   fptr = fopen(Path, "r");
   if (!fptr) {
-    printf("Failed to open file");
+    printf("Failed to open file\n");
     return NULL;
   }
   long size = stat_GetSize(fptr);
@@ -145,13 +176,6 @@ void Setup() {
   prepRender();
 
 
-  // Load images
-  uint width, height;
-  uint channels =4;
-  unsigned char * data  = stbi_load("../sprites/mineger.png" ,&width, &height, &channels, 4);
-  printf("Loaded PNG penger is %u * %u and has %u channels",  width, height , channels);
-
-  free(data);
   // Setup world etc....
 }
 
@@ -161,6 +185,9 @@ void clearScreen(){
 }
 void Render(RGFW_window * win){
     glUseProgram(RenderVariables.shaderProgram);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glUniform1i(glGetUniformLocation(RenderVariables.shaderProgram, "image"), 0); 
     glBindVertexArray(RenderVariables.VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     RGFW_window_swapBuffers_OpenGL(win);
