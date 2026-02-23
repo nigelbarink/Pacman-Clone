@@ -1,6 +1,7 @@
 #define RGFW_IMPLEMENTATION
 #define RGFW_OPENGL
 #define STB_IMAGE_IMPLEMENTATION
+
 #include "stb_image.h" 
 
 #include "RGFW.h"
@@ -47,9 +48,9 @@ GLuint texVBO;
 
 void prepRender(){
   // Load Vertex Shader
-  uint vert_shader = CompileShader("vertex.glsl", GL_VERTEX_SHADER);
+  uint vert_shader = CompileShader("../shader/vertex.glsl", GL_VERTEX_SHADER);
   // Load Fragment Shader
-  uint frag_shader = CompileShader("fragment.glsl", GL_FRAGMENT_SHADER);
+  uint frag_shader = CompileShader("../shader/fragment.glsl", GL_FRAGMENT_SHADER);
 
   RenderVariables.shaderProgram = glCreateProgram();
   glAttachShader(RenderVariables.shaderProgram, vert_shader);
@@ -95,10 +96,10 @@ void prepRender(){
 
   glBindTexture(GL_TEXTURE_2D, texture);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width,height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
- glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
   glGenerateMipmap(GL_TEXTURE_2D);
   free(data);
   
@@ -111,6 +112,7 @@ glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 
 }
+
 
 
 void keyfunc(RGFW_window *win, RGFW_key key, u8 keychar, RGFW_keymod keymod,
@@ -191,7 +193,7 @@ void Setup() {
 }
 
 void clearScreen(){
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
@@ -200,17 +202,16 @@ void clearScreen(){
 mat4 transform;
 void calcTransform(){
   mat4 ortho;
-  const float asp_ratio = 0.75f;
-  glm_ortho_default(asp_ratio,ortho);
-  glm_translate_z(ortho, 1);
+  glm_ortho(0, 800, 0, 600, -10,10 , ortho);
+  glm_translate_z(ortho, -1);
 
   mat4 scale ;
   glm_mat4_identity(scale);
-  float s = .25f;
-  glm_scale(scale, &s);
+  float s [3] ={.25f,.25f,.25f};
+  glm_scale(scale, s);
 
 
-  mat4 local ;
+  mat4 local;
   glm_mat4_identity (local);
   glm_translate(local, (vec3){2.0,0.0,0.0});
 
@@ -230,8 +231,8 @@ void Render(RGFW_window * win){
     glBindVertexArray(RenderVariables.VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     RGFW_window_swapBuffers_OpenGL(win);
+    //clearScreen();
 }
-
 
 
 void Update(){
